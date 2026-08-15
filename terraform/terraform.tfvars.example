@@ -1,0 +1,37 @@
+# Example variable values
+# Copy to terraform.tfvars and customize
+
+cluster_name = "k8s"
+
+# Network
+network_name   = "k8s-net"
+network_cidr   = "192.168.100.0/24"
+network_bridge = "virbr-k8s"
+
+# OS Selection: "fedora" or "ubuntu"
+os_distro = "fedora"
+
+# Base image (download with scripts/setup.sh)
+# Fedora:  /var/lib/libvirt/images/fedora-40-cloud.qcow2
+# Ubuntu:  /var/lib/libvirt/images/ubuntu-22.04-cloud.qcow2
+base_image_path = "/var/lib/libvirt/images/fedora-40-cloud.qcow2"
+
+# Master node
+master_ip        = "192.168.100.10"
+master_memory    = 2048  # 2 GB
+master_vcpu      = 2
+master_disk_size = 21474836480  # 20 GB
+
+# Worker nodes
+worker_count     = 2
+worker_memory    = 1024  # 1 GB per worker
+worker_vcpu      = 1
+worker_disk_size = 16106127360  # 15 GB
+
+# SSH
+ssh_user            = "km"
+ssh_public_key_path = "~/.ssh/id_ed25519.pub"
+
+# Kubernetes
+k8s_version      = "1.30"
+pod_network_cidr = "10.244.0.0/16"

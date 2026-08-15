@@ -1,0 +1,12 @@
+version: 2
+ethernets:
+  nic0:
+    match:
+      name: en*
+    addresses:
+      - ${ip_address}/24
+    gateway4: ${gateway}
+    nameservers:
+      addresses:
+        - 8.8.8.8
+        - 8.8.4.4

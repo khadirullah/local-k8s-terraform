@@ -1,0 +1,112 @@
+#cloud-config
+# ──────────────────────────────────────────────
+# Worker Node Cloud-Init - Ubuntu/Debian
+# Installs containerd + kubeadm, waits for master
+# to be ready via HTTP, then auto-joins the cluster
+# ──────────────────────────────────────────────
+
+hostname: ${hostname}
+fqdn: ${hostname}.k8s.local
+manage_etc_hosts: true
+
+users:
+  - name: ${ssh_user}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+    groups: [sudo]
+
+# Disable swap
+swap:
+  filename: ""
+
+write_files:
+  # Kernel modules for containerd
+  - path: /etc/modules-load.d/k8s.conf
+    content: |
+      overlay
+      br_netfilter
+
+  # Sysctl params for Kubernetes networking
+  - path: /etc/sysctl.d/k8s.conf
+    content: |
+      net.bridge.bridge-nf-call-iptables  = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward                 = 1
+
+  # containerd config
+  - path: /etc/containerd/config.toml
+    content: |
+      version = 2
+      [plugins."io.containerd.grpc.v1.cri"]
+        sandbox_image = "registry.k8s.io/pause:3.9"
+        [plugins."io.containerd.grpc.v1.cri".containerd]
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+            runtime_type = "io.containerd.runc.v2"
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+              SystemdCgroup = true
+
+  # Script to auto-join the cluster via HTTP
+  - path: /root/join-cluster.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+
+      MASTER_IP="${master_ip}"
+      JOIN_URL="http://$MASTER_IP:8000/join-command.sh"
+      MAX_RETRIES=60
+      RETRY_INTERVAL=10
+
+      echo "[worker] Waiting for master node to serve join token at $JOIN_URL ..."
+
+      for i in $(seq 1 $MAX_RETRIES); do
+        JOIN_CMD=$(curl -sf "$JOIN_URL" 2>/dev/null || true)
+
+        if [ -n "$JOIN_CMD" ]; then
+          echo "[worker] Got join command from master!"
+          echo "[worker] Joining cluster with: $JOIN_CMD"
+          eval "$JOIN_CMD"
+          echo "[worker] Successfully joined the cluster!"
+          exit 0
+        fi
+
+        echo "[worker] Attempt $i/$MAX_RETRIES - Master not ready yet. Retrying in $${RETRY_INTERVAL}s..."
+        sleep $RETRY_INTERVAL
+      done
+
+      echo "[worker] ERROR: Could not fetch join command after $MAX_RETRIES attempts."
+      echo "[worker] Manual join: ssh into master and run 'kubeadm token create --print-join-command'"
+      exit 1
+
+runcmd:
+  # Disable swap
+  - swapoff -a
+  - sed -i '/swap/d' /etc/fstab
+
+  # Load kernel modules
+  - modprobe overlay
+  - modprobe br_netfilter
+  - sysctl --system
+
+  # Install containerd
+  - apt-get update -y
+  - apt-get install -y apt-transport-https ca-certificates curl gnupg containerd
+  - mkdir -p /etc/containerd
+  - cp /etc/containerd/config.toml /etc/containerd/config.toml.bak || true
+  - systemctl restart containerd
+  - systemctl enable containerd
+
+  # Add Kubernetes apt repo
+  - mkdir -p /etc/apt/keyrings
+  - curl -fsSL "https://pkgs.k8s.io/core:/stable:/v${k8s_version}/deb/Release.key" | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  - echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v${k8s_version}/deb/ /" > /etc/apt/sources.list.d/kubernetes.list
+  - apt-get update -y
+  - apt-get install -y kubelet kubeadm kubectl
+  - apt-mark hold kubelet kubeadm kubectl
+
+  # Auto-join the cluster (fetches join token from master via HTTP)
+  - /root/join-cluster.sh
+
+final_message: "K8s worker node ${hostname} has joined the cluster! Cloud-init took $UPTIME seconds."

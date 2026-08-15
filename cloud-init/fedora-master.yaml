@@ -1,0 +1,154 @@
+#cloud-config
+# ──────────────────────────────────────────────
+# Master Node Cloud-Init - Fedora/RHEL
+# Installs containerd + kubeadm, initializes
+# the K8s control plane, deploys Calico CNI,
+# and serves the join token via HTTP for workers
+# ──────────────────────────────────────────────
+
+hostname: ${hostname}
+fqdn: ${hostname}.k8s.local
+manage_etc_hosts: true
+
+users:
+  - name: ${ssh_user}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+    groups: [wheel]
+
+# Disable swap
+swap:
+  filename: ""
+
+write_files:
+  # Kernel modules for containerd
+  - path: /etc/modules-load.d/k8s.conf
+    content: |
+      overlay
+      br_netfilter
+
+  # Sysctl params for Kubernetes networking
+  - path: /etc/sysctl.d/k8s.conf
+    content: |
+      net.bridge.bridge-nf-call-iptables  = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward                 = 1
+
+  # containerd config with systemd cgroup
+  - path: /etc/containerd/config.toml
+    content: |
+      version = 2
+      [plugins."io.containerd.grpc.v1.cri"]
+        sandbox_image = "registry.k8s.io/pause:3.9"
+        [plugins."io.containerd.grpc.v1.cri".containerd]
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+            runtime_type = "io.containerd.runc.v2"
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+              SystemdCgroup = true
+
+  # Kubernetes dnf repo
+  - path: /etc/yum.repos.d/kubernetes.repo
+    content: |
+      [kubernetes]
+      name=Kubernetes
+      baseurl=https://pkgs.k8s.io/core:/stable:/v${k8s_version}/rpm/
+      enabled=1
+      gpgcheck=1
+      gpgkey=https://pkgs.k8s.io/core:/stable:/v${k8s_version}/rpm/repodata/repomd.xml.key
+      exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
+
+  # kubeadm init config
+  - path: /root/kubeadm-config.yaml
+    content: |
+      apiVersion: kubeadm.k8s.io/v1beta3
+      kind: ClusterConfiguration
+      kubernetesVersion: "v${k8s_version}.0"
+      controlPlaneEndpoint: "${master_ip}:6443"
+      networking:
+        podSubnet: "${pod_cidr}"
+        serviceSubnet: "10.96.0.0/12"
+      ---
+      apiVersion: kubeadm.k8s.io/v1beta3
+      kind: InitConfiguration
+      localAPIEndpoint:
+        advertiseAddress: "${master_ip}"
+        bindPort: 6443
+      nodeRegistration:
+        criSocket: unix:///run/containerd/containerd.sock
+
+  # Systemd service to serve join token via HTTP on port 8000
+  # Workers will curl http://<master_ip>:8000/join-command.sh
+  - path: /etc/systemd/system/join-token-server.service
+    content: |
+      [Unit]
+      Description=Serve K8s join token via HTTP
+      After=network.target
+
+      [Service]
+      Type=simple
+      WorkingDirectory=/home/${ssh_user}
+      ExecStart=/usr/bin/python3 -m http.server 8000 --bind ${master_ip}
+      Restart=on-failure
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  # Disable swap
+  - swapoff -a
+  - sed -i '/swap/d' /etc/fstab
+
+  # Disable SELinux (required for K8s networking)
+  - setenforce 0 || true
+  - sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
+
+  # Disable firewalld (K8s manages its own iptables rules)
+  - systemctl disable --now firewalld || true
+
+  # Load kernel modules
+  - modprobe overlay
+  - modprobe br_netfilter
+  - sysctl --system
+
+  # Install containerd
+  - dnf install -y containerd
+  - mkdir -p /etc/containerd
+  - systemctl restart containerd
+  - systemctl enable containerd
+
+  # Install kubeadm, kubelet, kubectl
+  - dnf install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+  - systemctl enable kubelet
+
+  # Initialize Kubernetes control plane
+  - kubeadm init --config /root/kubeadm-config.yaml
+
+  # Setup kubeconfig for the user
+  - mkdir -p /home/${ssh_user}/.kube
+  - cp /etc/kubernetes/admin.conf /home/${ssh_user}/.kube/config
+  - chown -R ${ssh_user}:${ssh_user} /home/${ssh_user}/.kube
+
+  # Also setup for root
+  - mkdir -p /root/.kube
+  - cp /etc/kubernetes/admin.conf /root/.kube/config
+
+  # Install Calico CNI
+  - kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
+
+  # Generate join command for workers
+  - kubeadm token create --print-join-command > /home/${ssh_user}/join-command.sh
+  - chmod 644 /home/${ssh_user}/join-command.sh
+  - chown ${ssh_user}:${ssh_user} /home/${ssh_user}/join-command.sh
+
+  # Signal that master is ready
+  - touch /home/${ssh_user}/master-ready
+
+  # Start HTTP server so workers can fetch the join command
+  # Workers will curl http://${master_ip}:8000/join-command.sh
+  - systemctl daemon-reload
+  - systemctl enable --now join-token-server.service
+
+final_message: "K8s master node ${hostname} (Fedora) is ready! Join token served at http://${master_ip}:8000/join-command.sh. Cloud-init took $UPTIME seconds."

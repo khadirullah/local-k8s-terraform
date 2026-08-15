@@ -5,7 +5,9 @@ ethernets:
       name: en*
     addresses:
       - ${ip_address}/24
-    gateway4: ${gateway}
+    routes:
+      - to: default
+        via: ${gateway}
     nameservers:
       addresses:
         - 8.8.8.8

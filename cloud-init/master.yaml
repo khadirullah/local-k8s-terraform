@@ -2,8 +2,9 @@
 # ──────────────────────────────────────────────
 # Master Node Cloud-Init - Ubuntu/Debian
 # Installs containerd + kubeadm, initializes
-# the K8s control plane, deploys Calico CNI,
-# and serves the join token via HTTP for workers
+# the K8s control plane, deploys Calico CNI
+# (via Tigera Operator), and serves the join
+# token via HTTP for workers
 # ──────────────────────────────────────────────
 
 hostname: ${hostname}
@@ -37,22 +38,21 @@ write_files:
       net.bridge.bridge-nf-call-ip6tables = 1
       net.ipv4.ip_forward                 = 1
 
-  # containerd config
+  # containerd config (version 3 for containerd 2.x)
   - path: /etc/containerd/config.toml
     content: |
-      version = 2
-      [plugins."io.containerd.grpc.v1.cri"]
-        sandbox_image = "registry.k8s.io/pause:3.9"
-        [plugins."io.containerd.grpc.v1.cri".containerd]
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-            runtime_type = "io.containerd.runc.v2"
-            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
-              SystemdCgroup = true
+      version = 3
+      [plugins."io.containerd.cri.v1.images"]
+        sandbox_image = "registry.k8s.io/pause:3.11"
+      [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.runc]
+        runtime_type = "io.containerd.runc.v2"
+        [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.runc.options]
+          SystemdCgroup = true
 
-  # kubeadm init config
+  # kubeadm init config (v1beta4 for K8s 1.36)
   - path: /root/kubeadm-config.yaml
     content: |
-      apiVersion: kubeadm.k8s.io/v1beta3
+      apiVersion: kubeadm.k8s.io/v1beta4
       kind: ClusterConfiguration
       kubernetesVersion: "v${k8s_version}.0"
       controlPlaneEndpoint: "${master_ip}:6443"
@@ -60,13 +60,31 @@ write_files:
         podSubnet: "${pod_cidr}"
         serviceSubnet: "10.96.0.0/12"
       ---
-      apiVersion: kubeadm.k8s.io/v1beta3
+      apiVersion: kubeadm.k8s.io/v1beta4
       kind: InitConfiguration
       localAPIEndpoint:
         advertiseAddress: "${master_ip}"
         bindPort: 6443
       nodeRegistration:
         criSocket: unix:///run/containerd/containerd.sock
+
+  # Calico Installation custom resource (Tigera Operator)
+  - path: /root/calico-installation.yaml
+    content: |
+      apiVersion: operator.tigera.io/v1
+      kind: Installation
+      metadata:
+        name: default
+      spec:
+        cni:
+          type: Calico
+        calicoNetwork:
+          ipPools:
+          - blockSize: 26
+            cidr: "${pod_cidr}"
+            encapsulation: VXLANCrossSubnet
+            natOutgoing: Enabled
+            nodeSelector: all()
 
   # Systemd service to serve join token via HTTP on port 8000
   - path: /etc/systemd/system/join-token-server.service
@@ -124,8 +142,20 @@ runcmd:
   - mkdir -p /root/.kube
   - cp /etc/kubernetes/admin.conf /root/.kube/config
 
-  # Install Calico CNI
-  - kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
+  # Install Calico CNI via Tigera Operator (v3.32.1)
+  - kubectl --kubeconfig=/etc/kubernetes/admin.conf create -f https://raw.githubusercontent.com/projectcalico/calico/v3.32.1/manifests/tigera-operator.yaml
+  - sleep 10
+  - kubectl --kubeconfig=/etc/kubernetes/admin.conf wait --for=condition=Available deployment/tigera-operator -n tigera-operator --timeout=300s || true
+  # Wait for the Installation CRD to be registered before applying
+  - |
+    for i in $(seq 1 30); do
+      if kubectl --kubeconfig=/etc/kubernetes/admin.conf get crd installations.operator.tigera.io >/dev/null 2>&1; then
+        break
+      fi
+      echo "Waiting for Tigera CRDs... attempt $i/30"
+      sleep 5
+    done
+  - kubectl --kubeconfig=/etc/kubernetes/admin.conf apply -f /root/calico-installation.yaml
 
   # Generate join command for workers and save to a file
   - kubeadm token create --print-join-command > /home/${ssh_user}/join-command.sh

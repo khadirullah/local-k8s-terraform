@@ -2,7 +2,7 @@
 # ──────────────────────────────────────────────
 # setup.sh - Download cloud image and prepare
 # for Terraform deployment
-# Supports: Ubuntu 22.04 and Fedora 40
+# Supports: Ubuntu 24.04 and Fedora 44
 # ──────────────────────────────────────────────
 
 set -euo pipefail
@@ -23,11 +23,11 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 IMAGE_DIR="/var/lib/libvirt/images"
 
 # ── Image URLs ──
-UBUNTU_IMAGE_NAME="ubuntu-22.04-cloud.qcow2"
-UBUNTU_IMAGE_URL="https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
+UBUNTU_IMAGE_NAME="ubuntu-24.04-cloud.qcow2"
+UBUNTU_IMAGE_URL="https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
 
-FEDORA_IMAGE_NAME="fedora-40-cloud.qcow2"
-FEDORA_IMAGE_URL="https://download.fedoraproject.org/pub/fedora/linux/releases/40/Cloud/x86_64/images/Fedora-Cloud-Base-Generic.x86_64-40-1.14.qcow2"
+FEDORA_IMAGE_NAME="fedora-44-cloud.qcow2"
+FEDORA_IMAGE_URL="https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Generic.x86_64-44-1.7.qcow2"
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"
@@ -62,8 +62,8 @@ log "KVM acceleration available"
 echo ""
 echo "Select the OS for your K8s nodes:"
 echo ""
-echo "  1) Fedora 40       (dnf-based, like Amazon Linux)"
-echo "  2) Ubuntu 22.04    (apt-based)"
+echo "  1) Fedora 44       (dnf-based, like Amazon Linux)"
+echo "  2) Ubuntu 24.04    (apt-based)"
 echo ""
 read -p "Enter choice [1]: " OS_CHOICE
 OS_CHOICE="${OS_CHOICE:-1}"

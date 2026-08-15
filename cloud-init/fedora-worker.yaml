@@ -35,17 +35,16 @@ write_files:
       net.bridge.bridge-nf-call-ip6tables = 1
       net.ipv4.ip_forward                 = 1
 
-  # containerd config with systemd cgroup
+  # containerd config with systemd cgroup (version 3 for containerd 2.x)
   - path: /etc/containerd/config.toml
     content: |
-      version = 2
-      [plugins."io.containerd.grpc.v1.cri"]
-        sandbox_image = "registry.k8s.io/pause:3.9"
-        [plugins."io.containerd.grpc.v1.cri".containerd]
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-            runtime_type = "io.containerd.runc.v2"
-            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
-              SystemdCgroup = true
+      version = 3
+      [plugins."io.containerd.cri.v1.images"]
+        sandbox_image = "registry.k8s.io/pause:3.11"
+      [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.runc]
+        runtime_type = "io.containerd.runc.v2"
+        [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.runc.options]
+          SystemdCgroup = true
 
   # Kubernetes dnf repo
   - path: /etc/yum.repos.d/kubernetes.repo
@@ -85,7 +84,7 @@ write_files:
           exit 0
         fi
 
-        echo "[worker] Attempt $i/$MAX_RETRIES - Master not ready yet. Retrying in ${RETRY_INTERVAL}s..."
+        echo "[worker] Attempt $i/$MAX_RETRIES - Master not ready yet. Retrying in $${RETRY_INTERVAL}s..."
         sleep $RETRY_INTERVAL
       done
 

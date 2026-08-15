@@ -4,19 +4,24 @@
 
 resource "libvirt_network" "k8s" {
   name      = var.network_name
-  mode      = "nat"
   autostart = true
 
-  domain = "${var.cluster_name}.local"
-
-  addresses = [var.network_cidr]
-
-  dhcp {
-    enabled = false
+  forward = {
+    mode = "nat"
   }
 
-  dns {
-    enabled    = true
-    local_only = true
+  domain = {
+    name       = "${var.cluster_name}.local"
+    local_only = "yes"
+  }
+
+  # ips is a list of nested objects (nesting_mode: list)
+  ips = [{
+    address = cidrhost(var.network_cidr, 1)
+    netmask = cidrnetmask(var.network_cidr)
+  }]
+
+  dns = {
+    enable = "yes"
   }
 }

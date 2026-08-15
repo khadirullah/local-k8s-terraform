@@ -44,7 +44,7 @@ variable "os_distro" {
 variable "base_image_path" {
   description = "Path to the cloud image (qcow2). Use setup.sh to download."
   type        = string
-  default     = "/var/lib/libvirt/images/fedora-40-cloud.qcow2"
+  default     = "/var/lib/libvirt/images/fedora-44-cloud.qcow2"
 }
 
 
@@ -119,7 +119,7 @@ variable "ssh_public_key_path" {
 variable "k8s_version" {
   description = "Kubernetes version to install"
   type        = string
-  default     = "1.30"
+  default     = "1.36"
 }
 
 variable "pod_network_cidr" {

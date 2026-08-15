@@ -12,9 +12,9 @@ network_bridge = "virbr-k8s"
 os_distro = "fedora"
 
 # Base image (download with scripts/setup.sh)
-# Fedora:  /var/lib/libvirt/images/fedora-40-cloud.qcow2
-# Ubuntu:  /var/lib/libvirt/images/ubuntu-22.04-cloud.qcow2
-base_image_path = "/var/lib/libvirt/images/fedora-40-cloud.qcow2"
+# Fedora:  /var/lib/libvirt/images/fedora-44-cloud.qcow2
+# Ubuntu:  /var/lib/libvirt/images/ubuntu-24.04-cloud.qcow2
+base_image_path = "/var/lib/libvirt/images/fedora-44-cloud.qcow2"
 
 # Master node
 master_ip        = "192.168.100.10"
@@ -33,5 +33,5 @@ ssh_user            = "km"
 ssh_public_key_path = "~/.ssh/id_ed25519.pub"
 
 # Kubernetes
-k8s_version      = "1.30"
+k8s_version      = "1.36"
 pod_network_cidr = "10.244.0.0/16"

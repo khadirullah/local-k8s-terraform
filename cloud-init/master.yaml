@@ -49,7 +49,8 @@ write_files:
         [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.runc.options]
           SystemdCgroup = true
 
-  # kubeadm init config (v1beta4 for K8s 1.36)
+  # kubeadm init config (v1beta4, needs K8s 1.31 or newer)
+  # kubernetesVersion is replaced with the installed kubeadm version before init
   - path: /root/kubeadm-config.yaml
     content: |
       apiVersion: kubeadm.k8s.io/v1beta4
@@ -133,6 +134,9 @@ runcmd:
   - apt-mark hold kubelet kubeadm kubectl
 
   # Initialize Kubernetes control plane
+  # Run the control plane at the patch release the package repo installed, not x.y.0
+  - |
+    sed -i "s/^kubernetesVersion: .*/kubernetesVersion: \"$(kubeadm version -o short)\"/" /root/kubeadm-config.yaml
   - kubeadm init --config /root/kubeadm-config.yaml
 
   # Setup kubeconfig for the user

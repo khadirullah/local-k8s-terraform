@@ -59,7 +59,8 @@ write_files:
       gpgkey=https://pkgs.k8s.io/core:/stable:/v${k8s_version}/rpm/repodata/repomd.xml.key
       exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
 
-  # kubeadm init config (v1beta4 for K8s 1.36)
+  # kubeadm init config (v1beta4, needs K8s 1.31 or newer)
+  # kubernetesVersion is replaced with the installed kubeadm version before init
   - path: /root/kubeadm-config.yaml
     content: |
       apiVersion: kubeadm.k8s.io/v1beta4
@@ -144,6 +145,9 @@ runcmd:
   - systemctl enable kubelet
 
   # Initialize Kubernetes control plane
+  # Run the control plane at the patch release the package repo installed, not x.y.0
+  - |
+    sed -i "s/^kubernetesVersion: .*/kubernetesVersion: \"$(kubeadm version -o short)\"/" /root/kubeadm-config.yaml
   - kubeadm init --config /root/kubeadm-config.yaml
 
   # Setup kubeconfig for the user

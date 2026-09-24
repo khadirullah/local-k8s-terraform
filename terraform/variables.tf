@@ -117,9 +117,14 @@ variable "ssh_public_key_path" {
 # ── Kubernetes ──
 
 variable "k8s_version" {
-  description = "Kubernetes version to install"
+  description = "Kubernetes minor version to install, like \"1.36\". The package repo supplies its newest patch release."
   type        = string
   default     = "1.36"
+
+  validation {
+    condition     = can(regex("^1\\.(3[1-9]|[4-9][0-9])$", var.k8s_version))
+    error_message = "k8s_version must be a minor version from 1.31 up, like \"1.36\", with no patch number and no leading v."
+  }
 }
 
 variable "pod_network_cidr" {

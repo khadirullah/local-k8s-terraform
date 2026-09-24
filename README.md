@@ -248,6 +248,14 @@ kubeadm token create --print-join-command
 
 All values are configurable in `terraform.tfvars`.
 
+## Choosing a Kubernetes Version
+
+Set `k8s_version` in `terraform.tfvars` to a minor version, like `"1.36"` or `"1.37"`. The nodes install the newest patch release of that minor from pkgs.k8s.io, and `kubeadm init` runs the control plane at the same patch. A patch number, a leading `v`, or anything below `1.31` fails at `terraform plan`.
+
+The default stays at `1.36` because Calico v3.32 is tested on Kubernetes 1.34, 1.35 and 1.36. `1.37` may work, but Calico has not tested it yet.
+
+cloud-init only runs on first boot, so changing `k8s_version` does not upgrade a running cluster. Destroy it and apply again.
+
 ## Technology Stack
 
 | Component | Version | Purpose |

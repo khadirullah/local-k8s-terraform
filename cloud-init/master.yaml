@@ -166,7 +166,8 @@ runcmd:
   # Generate join command for workers and save to a file
   # in a folder of its own, because http.server hands out everything in its folder
   - mkdir -p /srv/k8s-join
-  - kubeadm token create --print-join-command > /srv/k8s-join/join-command.sh
+  # the token only has to outlive the workers' 10 minutes of retries, so it dies after an hour
+  - kubeadm token create --ttl 1h --print-join-command > /srv/k8s-join/join-command.sh
   - chmod 644 /srv/k8s-join/join-command.sh
 
   # Signal that master is ready

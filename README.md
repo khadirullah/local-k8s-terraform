@@ -231,10 +231,10 @@ sudo kubeadm join 192.168.100.10:6443 --token <token> --discovery-token-ca-cert-
 kubectl get nodes
 ```
 
-If the token has expired (tokens expire after 24 hours):
+The token in `/srv/k8s-join/join-command.sh` expires an hour after the master finishes setting up, so anyone who reaches port 8000 later gets a dead token. To add a worker after that:
 ```bash
 # On master, generate a new join command
-kubeadm token create --print-join-command
+sudo kubeadm token create --print-join-command
 ```
 
 ## Resource Allocation

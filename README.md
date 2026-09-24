@@ -69,7 +69,7 @@ terraform apply
 ~5-10 minutes later → kubectl get nodes → 3 nodes Ready ✅
 ```
 
-> **How workers get the join token:** The master runs a Python HTTP server (systemd service) that serves the `kubeadm join` command as a file. Workers `curl` this URL in a retry loop. No SSH keys needed between nodes.
+> **How workers get the join token:** The master runs a Python HTTP server (systemd service) that serves the `kubeadm join` command as a file. Workers `curl` this URL in a retry loop. No SSH keys needed between nodes. `http.server` serves everything in its folder. It runs from `/srv/k8s-join`, which holds only that file, as a throwaway systemd user that cannot see `/home`, where the admin kubeconfig lives.
 
 ## Project Structure
 
@@ -218,7 +218,7 @@ If you prefer to join workers manually (to understand the process):
 ssh km@192.168.100.10
 
 # 2. View the join command
-cat ~/join-command.sh
+cat /srv/k8s-join/join-command.sh
 # Output: kubeadm join 192.168.100.10:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
 
 # 3. SSH into a worker node

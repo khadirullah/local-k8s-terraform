@@ -65,8 +65,8 @@ resource "libvirt_domain" "master" {
   }
 
   os = {
-    type      = "hvm"
-    type_arch = "x86_64"
+    type         = "hvm"
+    type_arch    = "x86_64"
     boot_devices = [{ dev = "hd" }]
   }
 

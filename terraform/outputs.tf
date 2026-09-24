@@ -30,9 +30,9 @@ output "get_kubeconfig" {
 output "cluster_info" {
   description = "Cluster summary"
   value = {
-    master     = "${var.cluster_name}-master (${var.master_memory} MB, ${var.master_vcpu} vCPU)"
-    workers    = [for i in range(var.worker_count) : "${var.cluster_name}-worker-${i + 1} (${var.worker_memory} MB, ${var.worker_vcpu} vCPU)"]
-    network    = "${var.network_name} (${var.network_cidr})"
+    master      = "${var.cluster_name}-master (${var.master_memory} MB, ${var.master_vcpu} vCPU)"
+    workers     = [for i in range(var.worker_count) : "${var.cluster_name}-worker-${i + 1} (${var.worker_memory} MB, ${var.worker_vcpu} vCPU)"]
+    network     = "${var.network_name} (${var.network_cidr})"
     k8s_version = var.k8s_version
   }
 }

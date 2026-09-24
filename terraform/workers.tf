@@ -64,8 +64,8 @@ resource "libvirt_domain" "worker" {
   }
 
   os = {
-    type      = "hvm"
-    type_arch = "x86_64"
+    type         = "hvm"
+    type_arch    = "x86_64"
     boot_devices = [{ dev = "hd" }]
   }
 

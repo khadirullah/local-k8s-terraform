@@ -27,7 +27,7 @@ UBUNTU_IMAGE_NAME="ubuntu-24.04-cloud.qcow2"
 UBUNTU_IMAGE_URL="https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
 
 FEDORA_IMAGE_NAME="fedora-44-cloud.qcow2"
-FEDORA_IMAGE_URL="https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Generic.x86_64-44-1.7.qcow2"
+FEDORA_IMAGE_URL="https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2"
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"

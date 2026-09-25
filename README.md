@@ -277,9 +277,9 @@ cloud-init only runs on first boot, so changing `k8s_version` does not upgrade a
 
 4. **kubeadm**: The official Kubernetes bootstrapping tool. Mirrors how production clusters are built and gives full control over cluster configuration.
 
-5. **NAT Network with Static IPs**: VMs use a libvirt NAT network with DHCP disabled. Static IPs are assigned via cloud-init network config, making the cluster deterministic and reproducible.
+5. **NAT Network with Static IPs**: VMs use a libvirt NAT network with DHCP disabled. Static IPs are assigned via cloud-init network config, making the cluster deterministic and reproducible. Terraform gives each VM a fixed MAC address built from its IP (`192.168.100.11` gets `52:54:00:a8:64:0b`), and the network config finds the network card by that MAC. Fedora's NetworkManager can't match a card by a name pattern like `en*`, and a MAC keeps working if the card's name changes.
 
-6. **Fedora as Default**: Fedora uses `dnf`, same as Amazon Linux 2023 and RHEL. Practicing locally on Fedora means the same commands work on AWS.
+6. **Fedora as Default**: Fedora uses `dnf`, same as Amazon Linux 2023 and RHEL. Practicing locally on Fedora means the same commands work on AWS. Fedora 44 needs two changes from older guides. It ships dnf5, which drops `--disableexcludes`, so the cloud-init uses `--setopt=disable_excludes=kubernetes`. It also turns on zram swap, which `swapoff -a` doesn't keep off, so the cloud-init writes an empty `/etc/systemd/zram-generator.conf`.
 
 7. **Libvirt Provider v0.9.x**: Uses the rewritten provider that maps 1:1 with libvirt XML schemas, providing more control and better validation of VM configurations.
 

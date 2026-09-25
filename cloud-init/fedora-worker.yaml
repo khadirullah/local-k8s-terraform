@@ -116,7 +116,7 @@ runcmd:
   - systemctl enable containerd
 
   # Install kubeadm, kubelet, kubectl
-  - dnf install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+  - dnf install -y kubelet kubeadm kubectl --setopt=disable_excludes=kubernetes
   - systemctl enable kubelet
 
   # Auto-join the cluster (fetches join token from master via HTTP)

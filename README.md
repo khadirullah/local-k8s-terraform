@@ -105,7 +105,7 @@ local-k8s-terraform/
 | **Fedora 44** (default) | `dnf` | [Fedora Cloud](https://fedoraproject.org/cloud/download) | Matches Amazon Linux / RHEL workflow |
 | **Ubuntu 24.04** | `apt` | [Ubuntu Cloud](https://cloud-images.ubuntu.com/) | Debian-based environments |
 
-Select your OS during `scripts/setup.sh` or set `os_distro` in `terraform.tfvars`.
+Select your OS when you run `scripts/setup.sh`. Every run sets both `os_distro` and `base_image_path` in `terraform.tfvars`, so you can run it again to switch OS. If you edit `terraform.tfvars` by hand, change both lines together, because a Fedora image with Ubuntu's cloud-init (or the reverse) fails at boot.
 
 ## Prerequisites
 
@@ -154,7 +154,7 @@ chmod +x scripts/*.sh
 ./scripts/setup.sh
 # → Select OS: Fedora (1) or Ubuntu (2)
 # → Downloads cloud image to /var/lib/libvirt/images/
-# → Creates terraform.tfvars
+# → Creates terraform.tfvars, or updates the OS lines in an existing one
 # → Runs terraform init
 ```
 

@@ -119,13 +119,19 @@ cd "$PROJECT_DIR/terraform"
 
 if [ ! -f "terraform.tfvars" ]; then
     cp terraform.tfvars.example terraform.tfvars
-    # Update the OS distro and image path in tfvars
-    sed -i "s|os_distro.*=.*|os_distro = \"$OS_DISTRO\"|" terraform.tfvars
-    sed -i "s|base_image_path.*=.*|base_image_path = \"$IMAGE_DIR/$IMAGE_NAME\"|" terraform.tfvars
-    log "Created terraform.tfvars with os_distro=$OS_DISTRO"
+    TFVARS_ACTION="Created"
 else
-    log "terraform.tfvars already exists (not overwritten)"
+    TFVARS_ACTION="Updated"
 fi
+# Set the OS and its image together on every run, so the two never disagree.
+# Other settings in an existing terraform.tfvars are left as they are.
+sed -i "s|^[[:space:]]*os_distro[[:space:]]*=.*|os_distro = \"$OS_DISTRO\"|" terraform.tfvars
+sed -i "s|^[[:space:]]*base_image_path[[:space:]]*=.*|base_image_path = \"$IMAGE_DIR/$IMAGE_NAME\"|" terraform.tfvars
+grep -q "^os_distro = \"$OS_DISTRO\"" terraform.tfvars \
+    || err "terraform.tfvars has no os_distro line. Add os_distro and base_image_path, or delete the file and run setup.sh again."
+grep -q "^base_image_path = \"$IMAGE_DIR/$IMAGE_NAME\"" terraform.tfvars \
+    || err "terraform.tfvars has no base_image_path line. Add it, or delete the file and run setup.sh again."
+log "$TFVARS_ACTION terraform.tfvars with os_distro=$OS_DISTRO"
 
 terraform init
 log "Terraform initialized"

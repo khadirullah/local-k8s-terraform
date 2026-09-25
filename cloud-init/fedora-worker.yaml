@@ -22,6 +22,11 @@ swap:
   filename: ""
 
 write_files:
+  # An empty config turns off Fedora's zram swap, which kubelet refuses to run with.
+  # swapoff alone doesn't last, because a systemd generator recreates the swap unit.
+  - path: /etc/systemd/zram-generator.conf
+    content: ""
+
   # Kernel modules for containerd
   - path: /etc/modules-load.d/k8s.conf
     content: |
@@ -93,7 +98,8 @@ write_files:
       exit 1
 
 runcmd:
-  # Disable swap
+  # Disable swap (the reload drops the zram swap unit, then swapoff turns it off)
+  - systemctl daemon-reload
   - swapoff -a
   - sed -i '/swap/d' /etc/fstab
 

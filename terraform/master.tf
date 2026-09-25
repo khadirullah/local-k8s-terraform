@@ -6,6 +6,15 @@
 locals {
   master_cloud_init = var.os_distro == "fedora" ? "fedora-master.yaml" : "master.yaml"
   worker_cloud_init = var.os_distro == "fedora" ? "fedora-worker.yaml" : "worker.yaml"
+
+  # A fixed MAC per node, built from the last three octets of its IP.
+  # network-config.yaml matches the NIC by this MAC, because Fedora's
+  # NetworkManager can't match an interface name pattern like en*.
+  master_mac = format("52:54:00:%02x:%02x:%02x", [for o in slice(split(".", var.master_ip), 1, 4) : tonumber(o)]...)
+  worker_macs = [
+    for i in range(var.worker_count) :
+    format("52:54:00:%02x:%02x:%02x", [for o in slice(split(".", cidrhost(var.network_cidr, 11 + i)), 1, 4) : tonumber(o)]...)
+  ]
 }
 
 # Cloud-init disk for master (generates ISO locally)
@@ -28,8 +37,9 @@ resource "libvirt_cloudinit_disk" "master" {
   })
 
   network_config = templatefile("${path.module}/../cloud-init/network-config.yaml", {
-    ip_address = var.master_ip
-    gateway    = cidrhost(var.network_cidr, 1)
+    ip_address  = var.master_ip
+    gateway     = cidrhost(var.network_cidr, 1)
+    mac_address = local.master_mac
   })
 }
 
@@ -108,6 +118,9 @@ resource "libvirt_domain" "master" {
     ]
 
     interfaces = [{
+      mac = {
+        address = local.master_mac
+      }
       source = {
         network = {
           network = libvirt_network.k8s.name

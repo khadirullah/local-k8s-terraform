@@ -2,7 +2,7 @@ version: 2
 ethernets:
   nic0:
     match:
-      name: en*
+      macaddress: "${mac_address}"
     addresses:
       - ${ip_address}/24
     routes:

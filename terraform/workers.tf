@@ -23,8 +23,9 @@ resource "libvirt_cloudinit_disk" "worker" {
   })
 
   network_config = templatefile("${path.module}/../cloud-init/network-config.yaml", {
-    ip_address = cidrhost(var.network_cidr, 11 + count.index)
-    gateway    = cidrhost(var.network_cidr, 1)
+    ip_address  = cidrhost(var.network_cidr, 11 + count.index)
+    gateway     = cidrhost(var.network_cidr, 1)
+    mac_address = local.worker_macs[count.index]
   })
 }
 
@@ -107,6 +108,9 @@ resource "libvirt_domain" "worker" {
     ]
 
     interfaces = [{
+      mac = {
+        address = local.worker_macs[count.index]
+      }
       source = {
         network = {
           network = libvirt_network.k8s.name

@@ -95,6 +95,8 @@ local-k8s-terraform/
 │   ├── get-kubeconfig.sh         # Copy kubeconfig from master to host
 │   └── destroy.sh                # Clean teardown of cluster
 ├── .gitignore
+├── CHANGELOG.md                  # What changed in each release
+├── LICENSE
 └── README.md
 ```
 
@@ -248,6 +250,8 @@ sudo kubeadm token create --print-join-command
 
 All values are configurable in `terraform.tfvars`.
 
+`cluster_name` sets the node names. The default `k8s` gives `k8s-master`, `k8s-worker-1` and `k8s-worker-2`, and `cluster_name = "lab"` gives `lab-master`, `lab-worker-1` and so on. The same prefix names the VMs, their disks and the network's DNS domain (`lab.local`). Both Fedora and Ubuntu nodes register under these short names.
+
 ## Choosing a Kubernetes Version
 
 Set `k8s_version` in `terraform.tfvars` to a minor version, like `"1.36"` or `"1.37"`. The nodes install the newest patch release of that minor from pkgs.k8s.io, and `kubeadm init` runs the control plane at the same patch. A patch number, a leading `v`, or anything below `1.31` fails at `terraform plan`.
@@ -310,6 +314,24 @@ terraform destroy -auto-approve
 # (Optional) Clean up the downloaded local kubeconfig file:
 rm ~/.kube/config-local-k8s
 ```
+
+## Upgrading from v2.0
+
+v2.1 fixes a security hole in the join server, makes the Fedora option work, and keeps node names the same on both OSes. See [CHANGELOG.md](CHANGELOG.md) for the full list.
+
+cloud-init only runs on a VM's first boot, so a running v2.0 cluster keeps the old setup. Rebuild it:
+
+```bash
+git pull
+cd terraform
+../scripts/destroy.sh
+cd ..
+./scripts/setup.sh
+cd terraform
+terraform apply -auto-approve
+```
+
+`setup.sh` downloads the Fedora 44 image if v2.0 never managed to, and updates the OS lines in your existing `terraform.tfvars`.
 
 ## Upgrading from v1.0
 

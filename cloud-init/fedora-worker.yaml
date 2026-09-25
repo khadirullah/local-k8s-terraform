@@ -6,7 +6,10 @@
 # ──────────────────────────────────────────────
 
 hostname: ${hostname}
-fqdn: ${hostname}.k8s.local
+fqdn: ${hostname}.${domain}
+# Fedora sets the FQDN as the hostname by default, and kubelet names the node after it.
+# Keep short node names like k8s-master, the same as on Ubuntu.
+prefer_fqdn_over_hostname: false
 manage_etc_hosts: true
 
 users:

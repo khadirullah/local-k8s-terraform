@@ -15,6 +15,7 @@ resource "libvirt_cloudinit_disk" "worker" {
 
   user_data = templatefile("${path.module}/../cloud-init/${local.worker_cloud_init}", {
     hostname       = "${var.cluster_name}-worker-${count.index + 1}"
+    domain         = local.cluster_domain
     ssh_user       = var.ssh_user
     ssh_public_key = file(pathexpand(var.ssh_public_key_path))
     worker_ip      = cidrhost(var.network_cidr, 11 + count.index)

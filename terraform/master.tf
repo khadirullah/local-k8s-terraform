@@ -7,6 +7,9 @@ locals {
   master_cloud_init = var.os_distro == "fedora" ? "fedora-master.yaml" : "master.yaml"
   worker_cloud_init = var.os_distro == "fedora" ? "fedora-worker.yaml" : "worker.yaml"
 
+  # DNS domain of the cluster network, also used for each node's FQDN
+  cluster_domain = "${var.cluster_name}.local"
+
   # A fixed MAC per node, built from the last three octets of its IP.
   # network-config.yaml matches the NIC by this MAC, because Fedora's
   # NetworkManager can't match an interface name pattern like en*.
@@ -28,6 +31,7 @@ resource "libvirt_cloudinit_disk" "master" {
 
   user_data = templatefile("${path.module}/../cloud-init/${local.master_cloud_init}", {
     hostname       = "${var.cluster_name}-master"
+    domain         = local.cluster_domain
     ssh_user       = var.ssh_user
     ssh_public_key = file(pathexpand(var.ssh_public_key_path))
     master_ip      = var.master_ip

@@ -11,7 +11,7 @@ resource "libvirt_network" "k8s" {
   }
 
   domain = {
-    name       = "${var.cluster_name}.local"
+    name       = local.cluster_domain
     local_only = "yes"
   }
 

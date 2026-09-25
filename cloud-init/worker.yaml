@@ -6,7 +6,7 @@
 # ──────────────────────────────────────────────
 
 hostname: ${hostname}
-fqdn: ${hostname}.k8s.local
+fqdn: ${hostname}.${domain}
 manage_etc_hosts: true
 
 users:

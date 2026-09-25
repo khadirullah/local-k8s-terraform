@@ -92,7 +92,13 @@ if [ -f "$IMAGE_DIR/$IMAGE_NAME" ]; then
 else
     info "Downloading $OS_DISTRO cloud image (~600 MB)..."
     info "URL: $IMAGE_URL"
-    sudo wget --progress=bar:force -O "$IMAGE_DIR/$IMAGE_NAME" "$IMAGE_URL"
+    # Download to a .part file first, so a failed download never looks like a finished image
+    sudo rm -f "$IMAGE_DIR/$IMAGE_NAME.part"
+    if ! sudo wget --progress=bar:force -O "$IMAGE_DIR/$IMAGE_NAME.part" "$IMAGE_URL"; then
+        sudo rm -f "$IMAGE_DIR/$IMAGE_NAME.part"
+        err "Download failed. Nothing was saved, so running setup.sh again will retry."
+    fi
+    sudo mv "$IMAGE_DIR/$IMAGE_NAME.part" "$IMAGE_DIR/$IMAGE_NAME"
     log "Cloud image downloaded to $IMAGE_DIR/$IMAGE_NAME"
 fi
 
